@@ -99,7 +99,7 @@
         additional_name : '  <span class="additional-name">${additional_name}</span>',
         family_name :     '  <span class="family-name">${family_name}</span>',
         photo :           '  <img style="float:left; margin-right:4px" src="${photo_url}" alt="photo of ${fn}" class="photo"/>',
-        org :             ' <div class="org">${org}</div>',
+        org :             ' <div class="${fn}org">${org}</div>',
         // TODO: add obfuscation here
         email :           ' <a class="email" href="mailto:${email}">${email}<\/a>',
         street_address :  '  <div class="street-address">${street_address}<\/div>',
@@ -117,7 +117,11 @@
         ad :              '<p style="font-size:smaller;">This <a href="http://microformats.org/wiki/hcard">hCard</a> created with the <a href="http://microformats.org/code/hcard/creator">hCard creator</a>.</p>'
       };
 
-      var implied_n_opt = ((additionalname == undefined || additionalname == "") && (givenname && givenname.indexOf(' ') == -1) && (familyname && familyname.indexOf(' ') == -1));
+      var implied_n_opt = (
+          (additionalname == undefined || additionalname == "")
+          && (givenname && givenname.indexOf(' ') == -1)
+          && (familyname && familyname.indexOf(' ') == -1)
+      ), personal = ( filter(null, [givenname, additionalname, familyname]).length > 0 );
       if(implied_n_opt) {
         var fn = filter(null, [givenname, familyname]).join(' ');
       } else {
@@ -129,20 +133,25 @@
         fn += templates.family_name.process({family_name : familyname}) + "\n";
       }
       /* set results field */
-      var fn_id = (filter(null, [givenname, additionalname, familyname]).length > 0 ? filter(null, ['hcard', givenname, additionalname, familyname]).join(' ').replace(/ /g, '-'): '');
+      var fn_id = ( !personal ? ( !vorg ? '' : vorg.replace(/ /g, '-') )
+        : filter(null, ['hcard', givenname, additionalname, familyname]).join(' ').replace(/ /g, '-')
+      );
       var resultstr = '<div id="' + fn_id + '" class="vcard">\n';
-      if(photo && photo.match(/https?:\/\/.*\..{2,4}.*\/.+/)) resultstr += templates.photo.process({photo_url:photo, fn:fn_text}) + "\n";
-      if(url && url.match(/https?\:\/\/.*\..{2,4}.*/)) { // make sure the url at least looks like a url before we load it
-        resultstr += ' <a class="url fn';
-        if (!implied_n_opt) {
-          resultstr += ' n';
+      if(photo && photo.match(/https?:\/\/.*\..{2,4}.*\/.+/))
+        resultstr += templates.photo.process({photo_url:photo, fn:fn_text}) + "\n";
+      if ( personal ) {
+        if(url && url.match(/https?\:\/\/.*\..{2,4}.*/)) { // make sure the url at least looks like a url before we load it
+          resultstr += ' <a class="url fn';
+          if (!implied_n_opt) {
+            resultstr += ' n';
+          }
+          resultstr += '" href="' + url + '">'+fn+'<\/a>\n';
+        } else {
+          resultstr += ' <span class="' + (implied_n_opt ? 'fn':'fn n') + '">';
+          resultstr += (implied_n_opt ? '':'\n  ') + fn + '<\/span>\n';
         }
-        resultstr += '" href="' + url + '">'+fn+'<\/a>\n';
-      } else {
-        resultstr += ' <span class="' + (implied_n_opt ? 'fn':'fn n') + '">';
-        resultstr += (implied_n_opt ? '':'\n  ') + fn + '<\/span>\n';
       }
-      if(vorg) resultstr += templates.org.process({ org : vorg}) + "\n";
+      if(vorg) resultstr += templates.org.process({ 'fn' : ( personal ? '' : 'fn ' ), 'org' : vorg}) + "\n";
       if(email) resultstr += templates.email.process({email : email}) + "\n";
       if(street || city || region || postal || country) {
         resultstr += ' <div class="adr">\n';
